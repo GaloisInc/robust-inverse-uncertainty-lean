@@ -1,0 +1,709 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\F}{\mathbb F}
+\newcommand{\C}{\mathbb C}
+\newcommand{\E}{\mathcal E}
+\newcommand{\1}{\mathbf 1}
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\disttr}{D_{\mathrm{tr}}}
+
+\hypersetup{
+  pdftitle={A Robust Inverse Uncertainty Principle for the Boolean Cube,
+    Formalized in Lean},
+  pdfauthor={Marios}
+}
+
+\title{A Robust Inverse Uncertainty Principle for the Boolean Cube,\\
+Formalized in Lean}
+\author{Marios}
+\date{August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+An uncertainty principle says that a state cannot be sharply concentrated in
+two incompatible descriptions at once. On $n$ bits, the two descriptions
+considered here are the ordinary basis and the Walsh--Hadamard basis. The
+exact support uncertainty inequality says that the numbers of nonzero
+coordinates in these two bases have product at least $2^n$. Its equality
+cases are uniform superpositions over shifted linear subspaces, with a
+possible sign pattern. We prove a quantitative inverse statement that
+allows small probability leakage outside prescribed sets $S$ and $T$. If
+the leakage is at most $\varepsilon$ and
+$|S||T|\leq(1+\delta)2^n$, then, in a local parameter range, both sets are
+close to complementary shifted subspaces and the state is close to the
+corresponding coset state. The dependence is explicit:
+\[
+ q=\max\{(1024\varepsilon)^{1/4},\,4\sqrt{\delta}\},
+\]
+with relative set errors at most $5q$ and $12q$, and squared Euclidean state
+error at most $264q$. The constants are not optimized. The complete proof is
+formalized in Lean 4 against Mathlib, with a small Mathlib-only public
+specification separated from the implementation.
+\end{abstract}
+
+\section{Introduction}
+
+The word ``uncertainty'' has several mathematical meanings. The common idea
+is that a vector can be simple in one coordinate system or in an
+incompatible coordinate system, but generally not in both. For an $n$-qubit
+state, the two coordinate systems in this note are:
+\begin{itemize}
+  \item the \emph{computational basis}, labelled by $n$-bit strings; and
+  \item the \emph{Hadamard basis}, obtained by applying a Hadamard gate to
+  every qubit.
+\end{itemize}
+The change of coordinates between them is the Walsh Fourier transform.
+
+The \emph{support} of a function is simply the set of inputs where it is
+nonzero. A finite version of the Donoho--Stark support uncertainty principle
+says that every nonzero function $f$ on a finite abelian group $G$ satisfies
+\[
+  |\supp f|\,|\supp\widehat f|\geq |G|.
+\]
+The hat means ``take the Fourier transform.'' Equality has a rigid form:
+up to harmless symmetries, $f$ is constant on a shifted subgroup and zero
+elsewhere. On bit strings, subgroups are linear subspaces and shifted
+subgroups are affine subspaces, also called cosets.
+
+The exact support is unstable under noise. An arbitrarily small perturbation
+can give a vector full support in both bases. For quantum applications it is
+more natural to specify sets $S$ and $T$ that capture almost all measurement
+probability. The question addressed here is:
+
+\begin{quote}
+If $S$ and $T$ nearly attain the support-product lower bound and a state is
+almost concentrated on them in complementary bases, must the sets and state
+be close to a hidden-coset configuration?
+\end{quote}
+
+For the Boolean cube the answer is yes, quantitatively. The result below
+separates the two sources of error: $\varepsilon$ measures probability
+leakage and $\delta$ measures excess in the support product. This separation
+is useful both mathematically and for reading the formal statement.
+
+The qualitative phenomenon is not new. Exact uncertainty and its equality
+cases have an extensive literature
+\cite{DonohoStark1989,Meshulam2006,BonamiGhobber2013,FengHollmannXiang2019,
+WigdersonWigderson2021}. A recent result of Miller gives a robust coefficient
+inequality for exact supports in arbitrary finite abelian groups
+\cite{Miller2026}. Section~\ref{sec:literature} gives a precise comparison.
+The contribution here is a particular explicit package for $\F_2^n$:
+approximate concentration sets, symmetric-difference control of both sets,
+complex state-vector control including phase, and a machine-checked proof.
+Section~\ref{sec:continuous} compares this result with continuous Heisenberg
+stability, where the corresponding rigid objects are Gaussian wave packets
+rather than cosets.
+
+\section{The result in plain language}\label{sec:plain}
+
+An element of $\F_2^n$ is an $n$-bit string. Addition in $\F_2^n$ is bitwise
+exclusive-or. A \emph{linear subspace} $H$ is a collection of bit strings
+that contains the all-zero string and is closed under this addition. A
+\emph{coset} $a+H$ is what one gets by adding a fixed string $a$ to every
+element of $H$.
+
+A normalized function $f:\F_2^n\to\C$ can be read as a quantum state:
+$|f(x)|^2$ is the probability of observing $x$ in the computational basis.
+After a Hadamard transform, the probability of observing $y$ is
+$|\widehat f(y)|^2/2^n$. Thus the assumptions of the theorem say:
+\begin{enumerate}
+  \item computational-basis measurement lands in a set $S$ with probability
+  at least $1-\varepsilon$;
+  \item Hadamard-basis measurement lands in a set $T$ with probability at
+  least $1-\varepsilon$; and
+  \item the product $|S||T|$ is only a factor $1+\delta$ above the smallest
+  value permitted by uncertainty.
+\end{enumerate}
+
+The conclusion reconstructs a hidden linear structure. It finds a subspace
+$H$ such that $S$ is close to one shifted copy of $H$, while $T$ is close to
+a shifted copy of the complementary space $H^\perp$. Here $H^\perp$ consists
+of the bit strings having dot product zero with every element of $H$.
+The theorem also says that the entire complex state $f$, not just the two
+sets, is close to
+\[
+  \frac{1}{\sqrt{|H|}}
+  \sum_{x\in a+H}(-1)^{b\cdot x}|x\rangle,
+\]
+up to one physically irrelevant global phase.
+
+There are three numerical parameters because they play different roles:
+\begin{itemize}
+  \item $\varepsilon$ is lost probability mass;
+  \item $\delta$ is excess in the set-size product; and
+  \item $q$ is the accuracy promised by the conclusion.
+\end{itemize}
+The theorem is local: it assumes $0<q\leq1/100$ and applies when
+\[
+  \varepsilon\leq q^4/1024,\qquad \delta\leq q^2/16.
+\]
+Equivalently, one can compute $q$ from the two observed errors by taking
+\[
+  q=\max\{(1024\varepsilon)^{1/4},4\sqrt{\delta}\}.
+\]
+The fourth root means that the present quantitative bound becomes useful
+only when the leakage is quite small. This is a limitation of the proved
+estimate, not a claim that fourth-root behavior is optimal.
+
+\section{Formal statement of the result}
+
+\subsection{Normalization}
+
+Fix
+\[
+  V=\F_2^n,\qquad N=|V|=2^n.
+\]
+For $f:V\to\C$ use the unnormalized Walsh transform
+\[
+  \widehat f(y)=\sum_{x\in V}(-1)^{x\cdot y}f(x).
+\]
+Thus Parseval's identity is
+\[
+  \sum_{y\in V}|\widehat f(y)|^2
+    =N\sum_{x\in V}|f(x)|^2.
+\]
+For $A\subseteq V$, write
+\[
+  \E_A(f)=\sum_{x\in A}|f(x)|^2.
+\]
+The symmetric difference of two sets is denoted by $\triangle$.
+
+For a subspace $H\leq V$, offsets $a,b\in V$, and a phase $c\in\C$ with
+$|c|=1$, define the normalized modulated coset state
+\begin{equation}\label{eq:coset-state}
+  \phi_{H,a,b,c}(x)
+  =\frac{c(-1)^{b\cdot x}}{\sqrt{|H|}}\,\1_{a+H}(x).
+\end{equation}
+Its Walsh transform is supported on $b+H^\perp$.
+
+\subsection{Two-error theorem}
+
+\begin{theorem}[Robust inverse uncertainty]\label{thm:main}
+Let $S,T\subseteq V$ be nonempty, let $f:V\to\C$, and let
+$\varepsilon,\delta,q\in\mathbb R$ satisfy
+\[
+  \varepsilon,\delta\geq0,\qquad
+  0<q\leq\frac1{100},\qquad
+  \varepsilon\leq\frac{q^4}{1024},\qquad
+  \delta\leq\frac{q^2}{16}.
+\]
+Suppose
+\begin{align}
+  \E_V(f)&=1,\label{eq:normalization}\\
+  \E_S(f)&\geq1-\varepsilon,\label{eq:primal-concentration}\\
+  \E_T(\widehat f)&\geq(1-\varepsilon)N,
+    \label{eq:dual-concentration}\\
+  |S|\,|T|&\leq(1+\delta)N.\label{eq:product}
+\end{align}
+Then there are a subspace $H\leq V$, offsets $a,b\in V$, and a phase
+$c\in\C$, $|c|=1$, such that
+\begin{align}
+  |S\triangle(a+H)|&\leq5q|S|,\label{eq:S-shape}\\
+  |T\triangle(b+H^\perp)|&\leq12q|T|,\label{eq:T-shape}\\
+  \sum_{x\in V}|f(x)-\phi_{H,a,b,c}(x)|^2
+    &\leq264q.\label{eq:state-shape}
+\end{align}
+\end{theorem}
+
+The role of $q$ is only to make the conclusion and the admissible error
+region easy to read. It can be eliminated.
+
+\begin{corollary}[Independent-error form]\label{cor:rho}
+Under \eqref{eq:normalization}--\eqref{eq:product}, put
+\[
+  \rho(\varepsilon,\delta)
+  =\max\{(1024\varepsilon)^{1/4},\,4\sqrt{\delta}\}.
+\]
+If $0<\rho(\varepsilon,\delta)\leq1/100$, then
+\eqref{eq:S-shape}--\eqref{eq:state-shape} hold with
+$q=\rho(\varepsilon,\delta)$.
+\end{corollary}
+
+\begin{proof}
+The definition gives
+$\varepsilon\leq\rho^4/1024$ and
+$\delta\leq\rho^2/16$, so Theorem~\ref{thm:main} applies.
+\end{proof}
+
+\begin{remark}[Local and non-sharp constants]
+The condition $\rho\leq1/100$ makes this a local stability theorem. The
+constants $5$, $12$, and $264$, and the powers and numerical factors in
+$\rho$, are outputs of a proof designed for transparency and formalization;
+no optimality is claimed. The endpoint $\varepsilon=\delta=0$ is covered by
+the classical exact equality theorem. It is separated from
+Corollary~\ref{cor:rho} because that corollary uses a strictly positive
+control scale.
+\end{remark}
+
+\section{Proof architecture}\label{sec:proof}
+
+This section gives a conventional account of the proof. The formal
+development cited in Section~\ref{sec:lean} contains all finite-sum,
+rounding, and constant calculations. A reader interested mainly in the
+statement or the quantum interpretation can skip this section.
+
+\subsection{The proof in five steps}
+
+The argument can be summarized without the constants as follows.
+\begin{enumerate}
+  \item Restrict $f$ to $S$. The small amount removed in this operation
+  remains small after the Walsh transform by Parseval's identity, which says
+  that the transform preserves total squared length up to the known factor
+  $2^n$.
+  \item Near equality in the support bound makes the submatrix of Walsh
+  signs with rows in $T$ and columns in $S$ close to a rank-one matrix. A
+  rank-one matrix is one whose rows are all scalar multiples of a single
+  row.
+  \item A four-corner identity for Walsh signs converts this approximate
+  rank-one property into a statement that most translated pairs from
+  $S\times T$ have dot product zero.
+  \item An additive-combinatorial argument shows that two nearly maximally
+  sized, nearly orthogonal sets must be close to complementary subspaces.
+  \item Projecting onto the two resulting cosets leaves little error. The
+  common intersection of the two projector ranges is a single coset-state
+  line, so $f$ is close to a unit vector on that line.
+\end{enumerate}
+
+\subsection{The restricted inverse proposition}
+
+Let $P_S f=f\1_S$. The structural core of the proof is the following
+restricted-Walsh statement.
+
+\begin{proposition}[Restricted inverse step]\label{prop:restricted}
+Let $0<q\leq1/100$, let $\|f\|_2=1$, and suppose
+\begin{align}
+  \E_S(f)&\geq1-q,\label{eq:restricted-primal}\\
+  \E_T(\widehat{P_Sf})
+    &\geq\left(1-\frac{q^2}{16}\right)N\,\E_S(f),
+      \label{eq:restricted-fourier}\\
+  |S|\,|T|&\leq\left(1+\frac{q^2}{16}\right)N.
+      \label{eq:restricted-product}
+\end{align}
+Then there are $H,a,b$ satisfying
+\eqref{eq:S-shape} and \eqref{eq:T-shape}. Moreover, if
+$R_{H,a,b}$ denotes orthogonal projection onto the line spanned by
+\[
+  x\longmapsto |H|^{-1/2}(-1)^{b\cdot x}\1_{a+H}(x),
+\]
+then
+\begin{equation}\label{eq:rank-one}
+  \|f-R_{H,a,b}f\|_2^2\leq132q.
+\end{equation}
+\end{proposition}
+
+Here is the mechanism behind Proposition~\ref{prop:restricted}. Restrict the
+Walsh matrix to rows $T$ and columns $S$. Splitting $P_Sf$ into real and
+imaginary parts shows that one normalized real component $v:S\to\mathbb R$
+retains the ratio in \eqref{eq:restricted-fourier}. An exact Frobenius
+identity then bounds the residual between the restricted sign matrix
+$((-1)^{s\cdot t})_{t,s}$ and a rank-one matrix formed from $v$ and its
+restricted Walsh transform:
+\[
+  \mathrm{Res}\leq \frac{q^2}{8}N.
+\]
+Rounding the two factors to signs costs at least one unit of squared residual
+at every mismatching matrix entry. Hence the number of sign mismatches is at
+most $q^2N/8$.
+
+The four-point identity
+\[
+ (-1)^{s\cdot t}(-1)^{s_0\cdot t}
+ (-1)^{s\cdot t_0}(-1)^{s_0\cdot t_0}
+ =(-1)^{(s+s_0)\cdot(t+t_0)}
+\]
+turns those entry mismatches into almost orthogonality. Averaging over
+anchors gives $s_0\in S$ and $t_0\in T$ such that, for
+\[
+  A=S+s_0,\qquad B=T+t_0,
+\]
+at most $q^2|A||B|$ pairs $(a,b)\in A\times B$ have $a\cdot b=1$, while
+\[
+  |A||B|\geq(1-q)N.
+\]
+The following finite additive lemma is the structural engine.
+
+\begin{lemma}[Saturated almost orthogonality]\label{lem:saturated}
+Suppose $A,B\subseteq V$, $A\neq\varnothing$, $0\in B$,
+\[
+  |A||B|\geq(1-q)N,
+\]
+and at most $q^2|A||B|$ pairs in $A\times B$ are nonorthogonal. If
+$0<q\leq1/100$, then some subspace $L\leq V$ satisfies
+\[
+  |A\triangle L^\perp|\leq5q|A|,
+  \qquad
+  |B\triangle L|\leq12q|B|.
+\]
+\end{lemma}
+
+For completeness, the lemma is obtained by taking
+\[
+  X=\{b\in B:\ |\{a\in A:a\cdot b=1\}|\leq q|A|\}.
+\]
+Finite Markov gives $|X|\geq(1-q)|B|$. The inequality
+$\operatorname{bad}(x+x')\leq\operatorname{bad}(x)+
+\operatorname{bad}(x')$, Walsh Parseval, and the saturation bound imply
+$|X+X|<\tfrac32|X|$. The sharp small-doubling fact at the threshold $3/2$
+therefore identifies $X+X$ with the point set of a subspace $L$.
+Parseval and $|L||L^\perp|=N$ give
+\[
+  |L|\leq(1+10q)|B|,
+  \qquad |L^\perp|\leq(1+3q)|A|.
+\]
+Combining these size bounds with $X\subseteq B\cap L$ and counting
+nonorthogonal pairs outside $L^\perp$ yields the two asserted symmetric
+differences.
+
+Translating back gives the set conclusions in
+Proposition~\ref{prop:restricted}. To recover the vector, let $P$ be the
+coordinate projector onto $a+H$ and let $Q$ be the Fourier-coordinate
+projector onto $b+H^\perp$. Flatness estimates from the same restricted
+Walsh residual give
+\[
+  \|f-Pf\|_2^2\leq12q,\qquad
+  \|f-Qf\|_2^2\leq54q.
+\]
+The projectors commute, and their common range is the one-dimensional line
+in Proposition~\ref{prop:restricted}. Consequently,
+\[
+ \|f-PQf\|_2^2
+ \leq2\|f-Pf\|_2^2+2\|f-Qf\|_2^2
+ \leq132q,
+\]
+which proves \eqref{eq:rank-one}.
+
+\subsection{From two-sided concentration to the restricted hypothesis}
+
+\begin{proof}[Proof of Theorem~\ref{thm:main}]
+It is enough to use the weaker bounds
+\[
+  \E_S(f)\geq1-\eta,\qquad
+  \E_T(\widehat f)\geq(1-\eta)N,\qquad
+  |S||T|\leq(1+\theta)N,
+\]
+where
+\[
+  \eta=\frac{q^4}{1024},\qquad
+  \theta=\frac{q^2}{16}.
+\]
+Set
+\[
+  G=\E_S(f),\qquad
+  A=\E_T(\widehat{P_Sf}),\qquad
+  e=f-P_Sf.
+\]
+Then $\|e\|_2^2=1-G\leq\eta$, so Parseval gives
+$\|\widehat e\|_2^2\leq\eta N$. For every $r>0$, the pointwise Young
+inequality
+\[
+ |z+w|^2\leq(1+r)|z|^2+(1+r^{-1})|w|^2
+\]
+gives
+\[
+ \E_T(\widehat f)
+ \leq(1+r)A+(1+r^{-1})\eta N.
+\]
+Choose $r=q^2/32=\theta/2$. The exact budget identity
+\[
+  (1+r)(1-\theta)+(1+r^{-1})\eta=1-\eta
+\]
+and the bound $G\leq1$ show that the right side of Young's inequality would
+be at most $(1-\eta)N$ if $A$ were at most
+$(1-\theta)NG$. Comparing with the lower bound on
+$\E_T(\widehat f)$ therefore forces
+\[
+  A\geq(1-\theta)NG.
+\]
+Also $\eta\leq q$, so $G\geq1-q$. Thus all hypotheses of
+Proposition~\ref{prop:restricted} hold, and it supplies $H,a,b$ and the
+rank-one residual \eqref{eq:rank-one}.
+
+Let $v$ be the normalized vector spanning that line and put
+$d=\langle v,f\rangle$. Orthogonal projection gives
+\[
+  \|f-dv\|_2^2=1-|d|^2.
+\]
+Choose $c=d/|d|$ when $d\neq0$, and $c=1$ otherwise. Since $|d|\leq1$,
+\[
+  \|f-cv\|_2^2=2-2|d|
+  \leq2(1-|d|^2)
+  =2\|f-dv\|_2^2
+  \leq264q.
+\]
+The vector $cv$ is exactly \eqref{eq:coset-state}, completing the proof.
+\end{proof}
+
+\section{Quantum interpretation}\label{sec:quantum}
+
+Regard $f$ as the computational-basis amplitudes of an $n$-qubit pure state
+\[
+  |\psi\rangle=\sum_{x\in V}f(x)|x\rangle.
+\]
+Equation \eqref{eq:primal-concentration} says that computational-basis
+measurement lands in $S$ with probability at least $1-\varepsilon$.
+Because the amplitudes of the state after $H^{\otimes n}$ are
+$\widehat f(y)/\sqrt N$, equation \eqref{eq:dual-concentration} says that
+Hadamard-basis measurement lands in $T$ with the same probability.
+
+The state \eqref{eq:coset-state} is an affine CSS stabilizer state. For
+$h\in H$, translation $X^h$ has eigenvalue $(-1)^{b\cdot h}$; for
+$k\in H^\perp$, the phase operator $Z^k$ has eigenvalue
+$(-1)^{k\cdot a}$. Put less formally, ``CSS stabilizer state'' here means a
+uniform superposition over solutions of linear equations in the bits, with
+a linear pattern of plus and minus signs. The theorem therefore says that
+near-minimal
+concentration in two complementary bases certifies proximity to a hidden
+CSS/coset state, not merely that the two concentration sets look affine.
+
+Let $|\phi\rangle$ denote the state in \eqref{eq:coset-state}. For pure
+states,
+\[
+  \disttr(\psi,\phi)
+  =\sqrt{1-|\langle\psi|\phi\rangle|^2}
+  \leq\||\psi\rangle-|\phi\rangle\|_2
+  \leq\sqrt{264q}.
+\]
+Equivalently, the infidelity is at most $264q$. Every measurement outcome
+distribution for the two states is therefore within total variation
+distance $\sqrt{264q}$. These bounds are operationally meaningful but
+numerically coarse; improving the state constant is a natural next target.
+
+\section{Comparison with the continuous theorem}\label{sec:continuous}
+
+It is useful to compare Theorem~\ref{thm:main} with the familiar uncertainty
+principle for a particle moving on the real line. This comparison explains
+what kind of result we have proved, but the two theorems are not special
+cases of one another.
+
+Let $\psi:\mathbb R\to\C$ be a normalized wavefunction. Its position
+distribution is $|\psi(x)|^2$, and its momentum distribution is the squared
+magnitude of its Fourier transform. Write $\sigma_x$ and $\sigma_\xi$ for
+their standard deviations. With the normalization
+\[
+  \widehat\psi(\xi)
+  =(2\pi)^{-1/2}\int_{\mathbb R}e^{-ix\xi}\psi(x)\,dx,
+\]
+the Heisenberg inequality is
+\begin{equation}\label{eq:heisenberg}
+  \sigma_x\sigma_\xi\geq\frac12.
+\end{equation}
+Equality holds exactly for Gaussian wave packets, after allowing
+translation, modulation, dilation, and global phase
+\cite{FollandSitaram1997}.
+
+There is also a robust inverse statement: if the left side of
+\eqref{eq:heisenberg} is close to $1/2$, then the wavefunction is close to a
+Gaussian after applying those symmetries. The following elementary
+one-dimensional version makes this precise.
+
+\begin{proposition}[Continuous Gaussian stability]\label{prop:continuous}
+Suppose $\|\psi\|_2=1$, its position and momentum variances are finite, and
+\[
+  \sigma_x\sigma_\xi\leq\frac{1+\kappa}{2}
+\]
+for $\kappa\geq0$. Then there are
+$x_0,\xi_0,\theta\in\mathbb R$ and $s>0$ such that the normalized Gaussian
+wave packet
+\[
+  g(x)=e^{i\theta}e^{i\xi_0x}s^{1/2}\pi^{-1/4}
+       e^{-s^2(x-x_0)^2/2}
+\]
+satisfies
+\[
+  \|\psi-g\|_2^2\leq\kappa.
+\]
+\end{proposition}
+
+\begin{proof}
+Translate and modulate $\psi$ so that the two means are zero, then dilate it
+so that the position and momentum variances are equal. These operations do
+not change their product. For the resulting function $u$,
+\[
+  \langle u,(-d^2/dx^2+x^2)u\rangle
+  =2\sigma_x\sigma_\xi\leq1+\kappa.
+\]
+The harmonic oscillator $-d^2/dx^2+x^2$ has a Gaussian ground state with
+eigenvalue $1$, and every orthogonal state has energy at least $3$. This
+spectral gap implies that the squared component of $u$ perpendicular to the
+Gaussian is at most $\kappa/2$. If $\alpha$ is the overlap with the
+normalized ground-state Gaussian, choosing the best global phase gives
+\[
+  \|u-e^{i\arg\alpha}g_0\|_2^2
+  =2-2|\alpha|
+  \leq2(1-|\alpha|^2)
+  \leq\kappa.
+\]
+Undoing the translation, modulation, and dilation produces the required
+Gaussian packet.
+\end{proof}
+
+The proposition is a standard spectral-gap argument; much sharper and
+higher-order stability results are part of an active literature
+\cite{DoLamLu2026}. The analogy with our finite theorem is:
+\begin{center}
+\begin{tabular}{p{0.30\linewidth}p{0.29\linewidth}p{0.29\linewidth}}
+\hline
+ & Continuous Heisenberg & Boolean support theorem\\
+\hline
+Space & Real line & $n$-bit strings\\
+Measure of spread & Variance & Concentration-set size\\
+Exact minimizers & Gaussian packets & Modulated coset states\\
+Main rigidity tool & Harmonic-oscillator gap & Additive combinatorics\\
+Robust conclusion & Close to a Gaussian & Close to a coset state\\
+\hline
+\end{tabular}
+\end{center}
+
+The shared principle is an \emph{inverse theorem}: near equality in an
+uncertainty inequality forces closeness to the family of exact equality
+cases. The important difference is the geometry. Variance and smoothness on
+$\mathbb R$ lead to Gaussians and a linear spectral argument. Cardinality
+and XOR-addition on $\F_2^n$ lead to subspace cosets and a combinatorial
+argument. Consequently, the continuous theorem neither proves nor directly
+implies Theorem~\ref{thm:main}.
+
+\section{Relation to earlier work}\label{sec:literature}
+
+\paragraph{Exact support uncertainty.}
+Donoho and Stark established the finite support-product inequality in the
+signal-recovery setting \cite{DonohoStark1989}. Meshulam and others developed
+sharper uncertainty inequalities that depend on the subgroup structure of
+the finite abelian group \cite{Meshulam2006}. Equality cases and related
+generalizations are treated explicitly by Bonami--Ghobber and
+Feng--Hollmann--Xiang
+\cite{BonamiGhobber2013,FengHollmannXiang2019}; see also the survey of
+Wigderson--Wigderson \cite{WigdersonWigderson2021}. These results supply the
+exact baseline: a character restricted to a subgroup coset is an extremizer.
+They do not by themselves give the leakage-tolerant quantitative conclusion
+of Theorem~\ref{thm:main}.
+
+\paragraph{Miller's robust coefficient inequality.}
+Miller \cite[Theorem 3.2 and Corollary 3.1]{Miller2026} defines, for a
+nonzero function on an arbitrary finite abelian group, a uniformity
+coefficient $\nu(f)$ and a linearity coefficient $\eta(f)$. His corollary is
+\[
+  \frac{|\supp f|\,|\supp\widehat f|}{|G|}
+  \,\nu(f)\eta(f)\geq1.
+\]
+Since both coefficients are at most one, a support product near $|G|$
+forces them near one. Equality of $\nu$ means that $|f|$ is constant on its
+support; equality of $\eta$ forces the support to be a subgroup coset. This
+is a broad and elegant robust diagnostic, valid for all finite abelian
+groups.
+
+Theorem~\ref{thm:main} is not a special case of that displayed inequality,
+nor does it subsume it. The hypotheses and outputs differ:
+\begin{itemize}
+  \item Miller uses the literal supports of $f$ and $\widehat f$.
+  Theorem~\ref{thm:main} uses arbitrary concentration sets $S,T$ and remains
+  informative when both literal supports are all of $V$.
+  \item Miller controls scalar coefficients measuring magnitude uniformity
+  and additive structure. Theorem~\ref{thm:main} gives explicit
+  symmetric-difference bounds for both complementary cosets.
+  \item Theorem~\ref{thm:main} also controls the full complex vector in
+  squared $\ell_2$ distance, including modulation and global phase.
+  \item Miller works over arbitrary finite abelian groups. The present
+  theorem uses the special exponent-two geometry of $\F_2^n$, including a
+  four-point sign identity and a sharp small-doubling step.
+\end{itemize}
+The safest description is that the present result is a quantitative,
+noise-model-specific strengthening in the Boolean case, with a formal
+proof, rather than a new general uncertainty principle.
+
+\paragraph{Continuous stability.}
+The Gaussian conclusion for the Heisenberg variance inequality is the
+closest conceptual analogue, as discussed in
+Section~\ref{sec:continuous}. It belongs to a different branch of
+uncertainty theory: its notion of spread, symmetry group, extremizers, and
+proof mechanism all differ from the finite support problem. We include the
+comparison because it clarifies the term ``robust inverse uncertainty,'' not
+because either result subsumes the other.
+
+\section{Lean formalization and audit surface}\label{sec:lean}
+
+The formalization uses Lean 4.32.1 and Mathlib. It is organized so that an
+auditor need not read the implementation before understanding the claim.
+\begin{center}
+\begin{tabular}{p{0.34\linewidth}p{0.58\linewidth}}
+\hline
+File & Role\\
+\hline
+\texttt{Specification.lean} &
+Mathlib-only definitions of the cube, mass, Walsh transform, cosets,
+hypotheses, and conclusion.\\
+\texttt{Theorem.lean} &
+The public theorem, its displayed mathematical docstring, and a one-line
+proof delegation.\\
+\texttt{Internal/Bridge.lean} &
+Conversions between the public definitions and implementation definitions.\\
+\texttt{Robust.lean} &
+Analytic reduction, set and projector estimates, phase normalization, and
+the final constants.\\
+\texttt{Analytic.lean} &
+Parseval identities, restricted-Walsh residuals, mismatch counting, and the
+four-point argument.\\
+\texttt{Combinatorial.lean} &
+Finite Markov, small doubling, and saturated almost orthogonality.\\
+\texttt{Basic.lean} &
+Boolean Fourier and hidden-coset algebra.\\
+\hline
+\end{tabular}
+\end{center}
+
+The public declaration is:
+\begin{verbatim}
+theorem robust_inverse_uncertainty_phase
+    (h : NearExtremizer epsilon delta q S T f) :
+    exists H a b c, HiddenCosetApproximation q S T f H a b c
+\end{verbatim}
+The project contains no proof placeholders, project-local axioms, opaque
+declarations, unsafe declarations, or uses of \texttt{native\_decide}. The
+trusted base remains the Lean kernel, the imported Mathlib definitions and
+theorems, and the ordinary compiler/runtime assumptions needed to check the
+files \cite{deMouraUllrich2021,Mathlib2020}.
+
+\section{Discussion}
+
+The theorem supports three conclusions. First, cosets are not an artifact of
+exact support: they persist under a concrete two-basis noise model. Second,
+the vector conclusion is stronger than a statement about sets; near
+saturation identifies a quantum state up to the expected translation,
+modulation, and global phase. Third, formalization is useful here because the
+argument combines Fourier normalization, additive combinatorics, projector
+algebra, and many explicit constants.
+
+There are also clear limitations. The result is local, the dependence on
+the concentration loss is fourth-root, the constants are coarse, and the
+argument is specialized to exponent two. A sharper proof might improve the
+Young-inequality loss, avoid repeated factor-two estimates in the projector
+step, or replace mismatch rounding with a weighted stability argument.
+Extending the concentration-set theorem to general finite abelian groups
+would require a structural lemma adapted to their subgroup and phase
+geometry.
+
+\paragraph{AI assistance disclosure.}
+An AI system assisted with proof exploration, Lean implementation,
+expository drafting, and literature organization. The repository records
+the checkable formal artifact. Mathematical claims and decisions about
+authorship, novelty, and publication remain the responsibility of the human
+author.
+
+\bibliographystyle{alpha}
+\bibliography{references}
+
+\end{document}

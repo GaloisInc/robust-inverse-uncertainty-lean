@@ -54,21 +54,29 @@ def normalizedCosetState {n : ℕ}
       (if dotProduct b x = 0 then 1 else -1)
   else 0
 
-/-- The hypotheses say that `f` nearly minimizes Boolean support uncertainty. -/
-structure NearExtremizer {n : ℕ} (q : ℝ)
+/--
+The hypotheses say that `f` nearly minimizes Boolean support uncertainty.
+Here `ε` is the mass lost outside each concentration set, `δ` is the excess
+in the support-product bound, and `q` is the desired approximation scale.
+-/
+structure NearExtremizer {n : ℕ} (ε δ q : ℝ)
     (S T : Finset (Cube n)) (f : Cube n → ℂ) : Prop where
+  concentration_error_nonnegative : 0 ≤ ε
+  support_error_nonnegative : 0 ≤ δ
   q_pos : 0 < q
   q_small : q ≤ 1 / 100
+  concentration_error_control : ε ≤ q ^ 4 / 1024
+  support_error_control : δ ≤ q ^ 2 / 16
   primal_nonempty : S.Nonempty
   dual_nonempty : T.Nonempty
   normalized : massOn Finset.univ f = 1
-  primal_concentration : 1 - q ^ 4 / 8192 ≤ massOn S f
+  primal_concentration : 1 - ε ≤ massOn S f
   dual_concentration :
-    (1 - q ^ 4 / 8192) * Fintype.card (Cube n) ≤
+    (1 - ε) * Fintype.card (Cube n) ≤
       massOn T (walshTransform f)
   near_minimal_support :
     (S.card : ℝ) * T.card ≤
-      (1 + q ^ 2 / 16) * Fintype.card (Cube n)
+      (1 + δ) * Fintype.card (Cube n)
 
 /-- The conclusion says that the supports and state have hidden-coset form. -/
 structure HiddenCosetApproximation {n : ℕ} (q : ℝ)
@@ -81,7 +89,7 @@ structure HiddenCosetApproximation {n : ℕ} (q : ℝ)
   unit_phase : Complex.normSq c = 1
   state_distance :
     massOn Finset.univ
-      (fun x ↦ f x - normalizedCosetState H a b c x) ≤ 528 * q
+      (fun x ↦ f x - normalizedCosetState H a b c x) ≤ 264 * q
 
 end
 

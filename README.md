@@ -37,12 +37,21 @@ Verified without proof placeholders or added axioms:
 
 `LeanFormalization/Robust.lean` proves the implementation theorem. Its concise
 public form is `robust_inverse_uncertainty_phase` in
-`LeanFormalization/Theorem.lean`. For `0 < q ≤ 1/100`, unit-energy `f`, primal
-and Fourier concentration losses at most `q⁴/8192`, and support product at most
-`(1 + q²/16)2ⁿ`, it produces affine primal and dual cosets with
-symmetric-difference errors `5q` and `12q`. It also produces a unit-modulus
-phase whose normalized coset wave has squared `ℓ₂` distance at most `528q`
-from `f`.
+`LeanFormalization/Theorem.lean`. The statement separates concentration loss
+`ε` from support-product excess `δ`. Given `0 < q ≤ 1/100`,
+`ε ≤ q⁴/1024`, `δ ≤ q²/16`, a unit-energy `f` with primal and Fourier
+concentration losses at most `ε`, and support product at most `(1 + δ)2ⁿ`,
+it produces affine primal and dual cosets with symmetric-difference errors
+`5q` and `12q`. It also produces a unit-modulus phase whose normalized coset
+wave has squared `ℓ₂` distance at most `264q` from `f`.
+
+Equivalently, for independent errors one may take
+
+```text
+q = max((1024 ε)^(1/4), 4 sqrt(δ)),
+```
+
+provided this number lies in `(0, 1/100]`.
 
 ## Audit surface
 
@@ -56,7 +65,7 @@ docstring, the complete public theorem type, and a one-line proof delegation:
 
 ```lean
 theorem robust_inverse_uncertainty_phase
-    (h : NearExtremizer q S T f) :
+    (h : NearExtremizer ε δ q S T f) :
     ∃ H a b c, HiddenCosetApproximation q S T f H a b c
 ```
 
@@ -68,4 +77,14 @@ Build with:
 
 ```bash
 lake build
+```
+
+## Mathematical note
+
+The source and compiled version of the accompanying note are
+`paper/main.tex` and `paper/main.pdf`. Rebuild it with:
+
+```bash
+cd paper
+latexmk -pdf main.tex
 ```

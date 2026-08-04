@@ -27,14 +27,20 @@ $$
   \widehat f(y) = \sum_{x \in V} (-1)^{x \cdot y} f(x).
 $$
 
-The hypothesis `NearExtremizer q S T f` says precisely that
+The hypothesis `NearExtremizer ε δ q S T f` separates the two approximation
+errors.  The number $\varepsilon$ is the concentration loss, $\delta$ is the
+support-product excess, and $q$ is the scale at which the conclusion is
+requested.  Precisely,
 
 $$
 \begin{aligned}
-  &0 < q \leq 1/100,\qquad S,T \neq \varnothing,\qquad E_V(f)=1,\\
-  &E_S(f) \geq 1-q^4/8192,\\
-  &E_T(\widehat f) \geq (1-q^4/8192)N,\\
-  &|S|\,|T| \leq (1+q^2/16)N.
+  &\varepsilon,\delta\geq 0,\qquad
+    0 < q \leq 1/100,\qquad
+    \varepsilon\leq q^4/1024,\qquad \delta\leq q^2/16,\\
+  &S,T \neq \varnothing,\qquad E_V(f)=1,\\
+  &E_S(f) \geq 1-\varepsilon,\\
+  &E_T(\widehat f) \geq (1-\varepsilon)N,\\
+  &|S|\,|T| \leq (1+\delta)N.
 \end{aligned}
 $$
 
@@ -51,7 +57,7 @@ $$
 and
 
 $$
-  \sum_{x \in V} |f(x)-\phi(x)|^2 \leq 528q,
+  \sum_{x \in V} |f(x)-\phi(x)|^2 \leq 264q,
   \qquad
   \phi(x)=
   \frac{c\,(-1)^{b\cdot x}}{\sqrt{|H|}}\,
@@ -61,9 +67,9 @@ $$
 Thus every near-minimizer of Boolean support uncertainty is quantitatively
 close, up to global phase, to a normalized hidden-coset state.
 -/
-theorem robust_inverse_uncertainty_phase {n : ℕ} {q : ℝ}
+theorem robust_inverse_uncertainty_phase {n : ℕ} {ε δ q : ℝ}
     {S T : Finset (Cube n)} {f : Cube n → ℂ}
-    (h : NearExtremizer q S T f) :
+    (h : NearExtremizer ε δ q S T f) :
     ∃ (H : Submodule (ZMod 2) (Cube n)) (a b : Cube n) (c : ℂ),
       HiddenCosetApproximation q S T f H a b c :=
   Internal.robust_inverse_uncertainty_phase_from_implementation h

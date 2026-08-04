@@ -1537,8 +1537,8 @@ theorem energyOn_add_le_young {α : Type*} [Fintype α] [DecidableEq α]
 
 set_option maxHeartbeats 1000000 in
 /--
-The original concentration form of robust inverse uncertainty.  The
-concentration loss is `q^4 / 8192`, while support saturation is measured at
+The concentration form of robust inverse uncertainty.  The concentration
+loss is `q^4 / 1024`, while support saturation is measured at
 scale `q^2 / 16`.
 -/
 theorem robust_inverse_uncertainty {n : ℕ}
@@ -1547,9 +1547,9 @@ theorem robust_inverse_uncertainty {n : ℕ}
     (hS : S.Nonempty) (hT : T.Nonempty)
     (hf : complexEnergy f = 1)
     (hprimal :
-      1 - q ^ 4 / 8192 ≤ energyOn S f)
+      1 - q ^ 4 / 1024 ≤ energyOn S f)
     (hdual :
-      (1 - q ^ 4 / 8192) * Fintype.card (BooleanSpace n) ≤
+      (1 - q ^ 4 / 1024) * Fintype.card (BooleanSpace n) ≤
         energyOn T (walshFourier f))
     (hproduct :
       (S.card : ℝ) * T.card ≤
@@ -1567,8 +1567,8 @@ theorem robust_inverse_uncertainty {n : ℕ}
   let A : ℝ := energyOn T (walshFourier (restrictTo S f))
   let e : BooleanSpace n → ℂ := fun x ↦ f x - restrictTo S f x
   let E : ℝ := energyOn T (walshFourier e)
-  let eta : ℝ := q ^ 4 / 8192
-  let r : ℝ := q ^ 2 / 64
+  let eta : ℝ := q ^ 4 / 1024
+  let r : ℝ := q ^ 2 / 32
   have hN : 0 < N := by
     dsimp [N]
     positivity
@@ -1650,7 +1650,7 @@ theorem robust_inverse_uncertainty {n : ℕ}
       mul_le_mul_of_nonneg_left hE hweight
     apply le_of_mul_le_mul_left _ (by positivity : 0 < 1 + r)
     nlinarith [hdual', hYoung, hEweighted, hbudgetN]
-  have hq4le : q ^ 4 / 8192 ≤ q := by
+  have hq4le : q ^ 4 / 1024 ≤ q := by
     have hq1 : q ≤ 1 := hq.trans (by norm_num)
     have hq2le : q ^ 2 ≤ q := by
       nlinarith [sq_nonneg q]
@@ -1854,10 +1854,47 @@ theorem normSq_unitPhase (d : ℂ) :
     rw [Real.mul_self_sqrt (le_of_lt hD),
       mul_inv_cancel₀ (ne_of_gt hD)]
 
+theorem complexEnergy_sub_const_mul_real {α : Type*} [Fintype α]
+    (v : α → ℝ) (f : α → ℂ) (c : ℂ)
+    (hv : ∑ x, v x ^ 2 = 1) :
+    complexEnergy (fun x ↦ f x - c * (v x : ℂ)) =
+      complexEnergy f + Complex.normSq c -
+        2 * (realRankOneCoefficient v f *
+          (starRingEnd ℂ) c).re := by
+  let d := realRankOneCoefficient v f
+  have hcrossComplex :
+      (∑ x, f x * (starRingEnd ℂ) (c * (v x : ℂ))) =
+        d * (starRingEnd ℂ) c := by
+    calc
+      (∑ x, f x * (starRingEnd ℂ) (c * (v x : ℂ))) =
+          ∑ x, ((v x : ℂ) * f x) * (starRingEnd ℂ) c := by
+        apply Finset.sum_congr rfl
+        intro x hx
+        rw [map_mul, starRingEnd_apply, Complex.conj_ofReal]
+        ring
+      _ = (∑ x, (v x : ℂ) * f x) * (starRingEnd ℂ) c := by
+        rw [Finset.sum_mul]
+      _ = d * (starRingEnd ℂ) c := by rfl
+  have hcross :
+      (∑ x, (f x * (starRingEnd ℂ) (c * (v x : ℂ))).re) =
+        (d * (starRingEnd ℂ) c).re := by
+    rw [← Complex.re_sum, hcrossComplex]
+  have hv' : ∑ x, v x * v x = 1 := by
+    simpa [pow_two] using hv
+  change
+    complexEnergy (fun x ↦ f x - c * (v x : ℂ)) =
+      complexEnergy f + Complex.normSq c -
+        2 * (d * (starRingEnd ℂ) c).re
+  rw [complexEnergy, complexEnergy]
+  simp_rw [Complex.normSq_sub, Complex.normSq_mul,
+    Complex.normSq_ofReal]
+  rw [Finset.sum_sub_distrib, Finset.sum_add_distrib,
+    ← Finset.mul_sum, hv', mul_one, ← Finset.mul_sum, hcross]
+
 set_option maxHeartbeats 1000000 in
 /--
 Normalizing the coefficient of a real rank-one projection costs at most a
-factor four in squared distance.
+factor two in squared distance.
 -/
 theorem exists_unit_phase_close_to_real_rankOne
     {α : Type*} [Fintype α]
@@ -1866,7 +1903,7 @@ theorem exists_unit_phase_close_to_real_rankOne
     (hf : complexEnergy f = 1) :
     ∃ c : ℂ, Complex.normSq c = 1 ∧
       complexEnergy (fun x ↦ f x - c * (v x : ℂ)) ≤
-        4 * complexEnergy (fun x ↦ f x - realRankOne v f x) := by
+        2 * complexEnergy (fun x ↦ f x - realRankOne v f x) := by
   let d := realRankOneCoefficient v f
   let D := Complex.normSq d
   let R := complexEnergy (fun x ↦ f x - realRankOne v f x)
@@ -1883,32 +1920,17 @@ theorem exists_unit_phase_close_to_real_rankOne
   refine ⟨unitPhase d, normSq_unitPhase d, ?_⟩
   by_cases hd : d = 0
   · have hphase : unitPhase d = 1 := by simp [unitPhase, hd]
-    have hbase := complexEnergy_add_le_two f
-      (fun x ↦ -(v x : ℂ))
-    have hvEnergy :
-        complexEnergy (fun x ↦ -(v x : ℂ)) = 1 := by
-      rw [complexEnergy]
-      simp_rw [Complex.normSq_neg, Complex.normSq_ofReal]
-      simpa [pow_two] using hv
-    rw [hphase]
-    have hleft :
-        complexEnergy (fun x ↦ f x - (1 : ℂ) * (v x : ℂ)) ≤ 4 := by
-      calc
-        complexEnergy (fun x ↦ f x - (1 : ℂ) * (v x : ℂ)) =
-            complexEnergy (fun x ↦ f x + -(v x : ℂ)) := by
-          congr 1
-          funext x
-          ring
-        _ ≤ 2 * complexEnergy f +
-              2 * complexEnergy (fun x ↦ -(v x : ℂ)) := hbase
-        _ = 4 := by rw [hf, hvEnergy]; ring
     have hDzero : D = 0 := by simp [D, d, hd]
     change
-      complexEnergy (fun x ↦ f x - (1 : ℂ) * (v x : ℂ)) ≤
-        4 * R
-    rw [hR, hDzero]
-    norm_num at hleft ⊢
-    exact hleft
+      complexEnergy (fun x ↦ f x - unitPhase d * (v x : ℂ)) ≤
+        2 * R
+    rw [complexEnergy_sub_const_mul_real v f (unitPhase d) hv,
+      hf, normSq_unitPhase, hphase]
+    change
+      1 + 1 - 2 * (d * (starRingEnd ℂ) (1 : ℂ)).re ≤
+        2 * R
+    rw [hd, hR, hDzero]
+    norm_num
   · have hDpos : 0 < D := by
       dsimp [D, d]
       exact (Complex.normSq_pos).2 hd
@@ -1926,44 +1948,33 @@ theorem exists_unit_phase_close_to_real_rankOne
     have hphase :
         unitPhase d = d * (r : ℂ)⁻¹ := by
       simp [unitPhase, hd, r, D]
-    have hdelta :
-        Complex.normSq (d - unitPhase d) ≤ 1 - D := by
-      have hdeltaEq :
-          Complex.normSq (d - unitPhase d) = (r - 1) ^ 2 := by
-        rw [hphase]
-        have heq :
-            d - d * (r : ℂ)⁻¹ =
-              d * ((1 - 1 / r : ℝ) : ℂ) := by
-          push_cast
-          ring
-        rw [heq, Complex.normSq_mul, Complex.normSq_ofReal]
-        change D * ((1 - 1 / r) * (1 - 1 / r)) = (r - 1) ^ 2
-        field_simp [ne_of_gt hr]
-        nlinarith [hrsq]
-      rw [hdeltaEq]
+    have hcrossPhase :
+        (d * (starRingEnd ℂ) (unitPhase d)).re = r := by
+      have hdNorm : d * (starRingEnd ℂ) d = (D : ℂ) := by
+        simp [D, Complex.normSq_eq_conj_mul_self, mul_comm]
+      have hcomplex :
+          d * (starRingEnd ℂ) (unitPhase d) =
+            (D : ℂ) * (r : ℂ)⁻¹ := by
+        rw [hphase, map_mul, starRingEnd_apply, map_inv₀,
+          Complex.conj_ofReal]
+        rw [← mul_assoc]
+        rw [show d * star d = (D : ℂ) by
+          simpa only [starRingEnd_apply] using hdNorm]
+      rw [hcomplex, ← Complex.ofReal_inv, ← Complex.ofReal_mul]
+      simp only [Complex.ofReal_re]
+      field_simp [ne_of_gt hr]
       nlinarith [hrsq]
-    have hdecomp :
-        (fun x ↦ f x - unitPhase d * (v x : ℂ)) =
-          fun x ↦
-            (f x - realRankOne v f x) +
-              (d - unitPhase d) * (v x : ℂ) := by
-      funext x
-      simp only [realRankOne, d]
-      ring
-    rw [hdecomp]
-    calc
-      complexEnergy
-          (fun x ↦
-            (f x - realRankOne v f x) +
-              (d - unitPhase d) * (v x : ℂ)) ≤
-        2 * R +
-          2 * complexEnergy
-            (fun x ↦ (d - unitPhase d) * (v x : ℂ)) :=
-        complexEnergy_add_le_two _ _
-      _ = 2 * R + 2 * Complex.normSq (d - unitPhase d) := by
-        rw [complexEnergy_const_mul, complexEnergy_ofReal, hv, mul_one]
-      _ ≤ 2 * R + 2 * (1 - D) := by gcongr
-      _ = 4 * R := by rw [hR]; ring
+    change
+      complexEnergy (fun x ↦ f x - unitPhase d * (v x : ℂ)) ≤
+        2 * R
+    rw [complexEnergy_sub_const_mul_real v f (unitPhase d) hv,
+      hf, normSq_unitPhase]
+    change
+      1 + 1 - 2 * (d * (starRingEnd ℂ) (unitPhase d)).re ≤
+        2 * R
+    rw [hcrossPhase, hR]
+    nlinarith [hrsq,
+      mul_nonneg (le_of_lt hr) (sub_nonneg.mpr hrle)]
 
 set_option maxHeartbeats 1000000 in
 /--
@@ -1978,9 +1989,9 @@ theorem robust_inverse_uncertainty_phase_implementation {n : ℕ}
     (hS : S.Nonempty) (hT : T.Nonempty)
     (hf : complexEnergy f = 1)
     (hprimal :
-      1 - q ^ 4 / 8192 ≤ energyOn S f)
+      1 - q ^ 4 / 1024 ≤ energyOn S f)
     (hdual :
-      (1 - q ^ 4 / 8192) * Fintype.card (BooleanSpace n) ≤
+      (1 - q ^ 4 / 1024) * Fintype.card (BooleanSpace n) ≤
         energyOn T (walshFourier f))
     (hproduct :
       (S.card : ℝ) * T.card ≤
@@ -1996,7 +2007,7 @@ theorem robust_inverse_uncertainty_phase_implementation {n : ℕ}
             (fun x ↦ f x -
               c * (Real.sqrt (Fintype.card H) : ℂ)⁻¹ *
                 cosetWave H a b x) ≤
-            528 * q := by
+            264 * q := by
   obtain ⟨H, a, b, hSC, hTD, hrank⟩ :=
     robust_inverse_uncertainty S T f hq0 hq hS hT hf
       hprimal hdual hproduct
@@ -2021,11 +2032,11 @@ theorem robust_inverse_uncertainty_phase_implementation {n : ℕ}
         rw [show v x = normalizedRealCosetWave H a b x by rfl,
           ofReal_normalizedRealCosetWave]
         ring
-    _ ≤ 4 * complexEnergy
+    _ ≤ 2 * complexEnergy
           (fun x ↦ f x - realRankOne v f x) := hphase
-    _ ≤ 4 * (132 * q) :=
+    _ ≤ 2 * (132 * q) :=
       mul_le_mul_of_nonneg_left hprojection (by norm_num)
-    _ = 528 * q := by ring
+    _ = 264 * q := by ring
 
 end
 
