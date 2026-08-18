@@ -1,3 +1,10 @@
+/-
+Copyright (c) 2026 Galois, Inc. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+SPDX-License-Identifier: Apache-2.0
+Authors: Marios Georgiou
+-/
+
 import Mathlib.Algebra.Module.ZMod
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Finset.SymmDiff

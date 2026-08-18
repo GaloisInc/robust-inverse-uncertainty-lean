@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this formalization, please cite the software and accompanying paper."
+title: "A Robust Inverse Uncertainty Principle for the Boolean Cube, Formalized in Lean"
+type: software
+authors:
+  - family-names: Georgiou
+    given-names: Marios
+    affiliation: "Galois, Inc."
+version: 0.1.0
+date-released: 2026-08-18
+repository-code: "https://github.com/GaloisInc/robust-inverse-uncertainty-lean"
+license: Apache-2.0
