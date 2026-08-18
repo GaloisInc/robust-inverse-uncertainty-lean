@@ -1,7 +1,5 @@
 # Lean formalization of the hidden-coset core
 
-[![Lean](https://github.com/GaloisInc/robust-inverse-uncertainty-lean/actions/workflows/lean.yml/badge.svg)](https://github.com/GaloisInc/robust-inverse-uncertainty-lean/actions/workflows/lean.yml)
-
 The library checks the exact hidden-coset algebra and the quantitative robust
 inverse-uncertainty theorem on `F₂ⁿ`.
 
