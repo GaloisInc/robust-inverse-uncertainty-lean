@@ -623,19 +623,23 @@ concentration-set near-extremal regime, even when the literal supports of the
 original state and its transform are full.
 
 Theorem~\ref{thm:main} is best viewed as a quantitative refinement of this
-picture for the Boolean cube. It adds the following conclusions:
+picture for the Boolean cube. It adds the following near-equality estimates:
 \begin{itemize}
-  \item It proves the existence of a subspace $H$ and shifts $a,b$ for which
-  $S$ and $T$ have explicit symmetric-difference bounds from $a+H$ and
-  $b+H^\perp$.
-  \item It controls the full complex vector in squared $\ell_2$ distance,
-  including modulation and global phase.
-  \item It gives concrete constants and a complete Lean formalization of the
-  geometric and vector conclusions.
-  \item Miller works over arbitrary finite abelian groups. The present
-  theorem uses the special exponent-two geometry of $\F_2^n$, including a
-  four-point sign identity and a sharp small-doubling step.
+  \item There are a subspace $H$ and shifts $a,b$ such that $S$ differs from
+  $a+H$ in at most $5q|S|$ points and $T$ differs from $b+H^\perp$ in at
+  most $12q|T|$ points. Thus the two sets are close to a pair of
+  complementary cosets built from the same subspace.
+  \item The squared $\ell_2$ distance between the original state and the
+  corresponding modulated coset state is at most $264q$, after allowing a
+  global phase. This controls the complex amplitudes and relative signs, not
+  only the supports or measurement probabilities.
+  \item These geometric and state-vector estimates, including their
+  constants, have a complete Lean formalization.
 \end{itemize}
+These conclusions trade generality for specificity. Miller works over
+arbitrary finite abelian groups. The present theorem uses the special
+exponent-two geometry of $\F_2^n$, including a four-point sign identity and
+a sharp small-doubling step.
 The proof given here is self-contained and does not invoke Miller's theorem.
 Conceptually, however, it develops quantitative geometric and phase rigidity in
 a Boolean regime diagnosed by his coefficient inequality. We do not claim a
@@ -701,14 +705,13 @@ files \cite{deMouraUllrich2021,Mathlib2020}.
 
 \section{Discussion}
 
-Relative to Miller's coefficient-level result, the added content is quantitative
-geometric and vector rigidity in the Boolean setting. The theorem proves the
-existence of paired cosets with quantitative symmetric-difference bounds
-under a concrete two-basis noise model. It also shows that near saturation
-identifies the quantum state up to the expected translation, modulation, and
-global phase. Formalization is useful here because the argument combines
-Fourier normalization, additive combinatorics, projector algebra, and many
-explicit constants.
+Relative to Miller's coefficient-level result, the added content is a pair
+of quantitative distance estimates in the Boolean setting. For near
+equality, the theorem bounds how many points separate $S$ and $T$ from a
+pair of complementary cosets, and it bounds how far the full complex state
+is from the corresponding coset state. Formalization is useful here because
+the argument combines Fourier normalization, additive combinatorics,
+projector algebra, and many explicit constants.
 
 There are also clear limitations. The result is local, the dependence on
 the concentration loss is fourth-root, the constants are coarse, and the
