@@ -41,9 +41,11 @@ considered here are the ordinary basis and the Walsh--Hadamard basis. The
 exact support uncertainty inequality says that the numbers of nonzero
 coordinates in these two bases have product at least $2^n$. Its equality
 cases are uniform superpositions over shifted linear subspaces, with a
-possible sign pattern. We prove a quantitative inverse statement that
-allows small probability leakage outside prescribed sets $S$ and $T$. If
-the leakage is at most $\varepsilon$ and
+possible sign pattern. Miller recently gave a robust coefficient inequality
+for this phenomenon over arbitrary finite abelian groups
+\cite{Miller2026}. We prove a quantitative refinement for the Boolean cube
+that allows small probability leakage outside prescribed sets $S$ and $T$.
+If the leakage is at most $\varepsilon$ and
 $|S||T|\leq(1+\delta)2^n$, then, in a local parameter range, both sets are
 close to complementary shifted subspaces and the state is close to the
 corresponding coset state. The dependence is explicit:
@@ -99,12 +101,17 @@ is useful both mathematically and for reading the formal statement.
 The qualitative phenomenon is not new. Exact uncertainty and its equality
 cases have an extensive literature
 \cite{DonohoStark1989,Meshulam2006,BonamiGhobber2013,FengHollmannXiang2019,
-WigdersonWigderson2021}. A recent result of Miller gives a robust coefficient
-inequality for exact supports in arbitrary finite abelian groups
-\cite{Miller2026}. Section~\ref{sec:literature} gives a precise comparison.
-The contribution here is a particular explicit package for $\F_2^n$:
-approximate concentration sets, symmetric-difference control of both sets,
-complex state-vector control including phase, and a machine-checked proof.
+WigdersonWigderson2021}. A recent theorem of Miller controls Fourier overlap
+through uniformity and linearity coefficients on arbitrary finite abelian
+groups; its support corollary diagnoses near equality in the support-product
+bound \cite{Miller2026}. Applying the general theorem to normalized
+restrictions connects it directly to the concentration-set regime considered
+here. The result in this note should therefore be read as a quantitative
+refinement for $\F_2^n$, rather than as a separate general principle. It
+trades group generality for symmetric-difference bounds for paired cosets,
+complex state-vector control including phase, explicit constants, and a
+machine-checked proof. Section~\ref{sec:literature} gives a precise
+comparison.
 Section~\ref{sec:continuous} compares this result with continuous Heisenberg
 stability, where the corresponding rigid objects are Gaussian wave packets
 rather than cosets.
@@ -606,24 +613,33 @@ support; equality of $\eta$ forces the support to be a subgroup coset. This
 is a broad and elegant robust diagnostic, valid for all finite abelian
 groups.
 
-Theorem~\ref{thm:main} is not a special case of that displayed inequality,
-nor does it subsume it. The hypotheses and outputs differ:
+Miller's more general Theorem~3.2 bounds the Fourier overlap of two arbitrary
+functions using support sizes together with $\nu$ and $\eta$. In the setting
+of this note, one may apply it to the normalized restriction of the state to
+$S$ and the normalized restriction of its Fourier transform to $T$. Small
+leakage makes the resulting Fourier overlap close to one. Thus Miller's
+theorem already gives a coefficient-level description of the
+concentration-set near-extremal regime, even when the literal supports of the
+original state and its transform are full.
+
+Theorem~\ref{thm:main} is best viewed as a quantitative refinement of this
+picture for the Boolean cube. It adds the following conclusions:
 \begin{itemize}
-  \item Miller uses the literal supports of $f$ and $\widehat f$.
-  Theorem~\ref{thm:main} uses arbitrary concentration sets $S,T$ and remains
-  informative when both literal supports are all of $V$.
-  \item Miller controls scalar coefficients measuring magnitude uniformity
-  and additive structure. Theorem~\ref{thm:main} gives explicit
-  symmetric-difference bounds for both complementary cosets.
-  \item Theorem~\ref{thm:main} also controls the full complex vector in
-  squared $\ell_2$ distance, including modulation and global phase.
+  \item It proves the existence of a subspace $H$ and shifts $a,b$ for which
+  $S$ and $T$ have explicit symmetric-difference bounds from $a+H$ and
+  $b+H^\perp$.
+  \item It controls the full complex vector in squared $\ell_2$ distance,
+  including modulation and global phase.
+  \item It gives concrete constants and a complete Lean formalization of the
+  geometric and vector conclusions.
   \item Miller works over arbitrary finite abelian groups. The present
   theorem uses the special exponent-two geometry of $\F_2^n$, including a
   four-point sign identity and a sharp small-doubling step.
 \end{itemize}
-The safest description is that the present result is a quantitative,
-noise-model-specific strengthening in the Boolean case, with a formal
-proof, rather than a new general uncertainty principle.
+The proof given here is self-contained and does not invoke Miller's theorem.
+Conceptually, however, it develops quantitative geometric and phase rigidity in
+a Boolean regime diagnosed by his coefficient inequality. We do not claim a
+new general uncertainty principle.
 
 \paragraph{Continuous stability.}
 The Gaussian conclusion for the Heisenberg variance inequality is the
@@ -666,10 +682,10 @@ Boolean Fourier and hidden-coset algebra.\\
 \end{center}
 
 \paragraph{Artifact availability.}
-The complete Lean 4 formalization and the sources for this note are available
-in the public, versioned repository release
+The complete Lean 4 formalization corresponding to this note is available in
+the public, versioned repository release
 \cite{GeorgiouLeanArtifact2026}. The tag \texttt{v0.1.0} identifies the
-artifact described in this paper.
+formal artifact checked in this paper.
 
 The public declaration is:
 \begin{verbatim}
@@ -685,13 +701,14 @@ files \cite{deMouraUllrich2021,Mathlib2020}.
 
 \section{Discussion}
 
-The theorem supports three conclusions. First, cosets are not an artifact of
-exact support: they persist under a concrete two-basis noise model. Second,
-the vector conclusion is stronger than a statement about sets; near
-saturation identifies a quantum state up to the expected translation,
-modulation, and global phase. Third, formalization is useful here because the
-argument combines Fourier normalization, additive combinatorics, projector
-algebra, and many explicit constants.
+Relative to Miller's coefficient-level result, the added content is quantitative
+geometric and vector rigidity in the Boolean setting. The theorem proves the
+existence of paired cosets with quantitative symmetric-difference bounds
+under a concrete two-basis noise model. It also shows that near saturation
+identifies the quantum state up to the expected translation, modulation, and
+global phase. Formalization is useful here because the argument combines
+Fourier normalization, additive combinatorics, projector algebra, and many
+explicit constants.
 
 There are also clear limitations. The result is local, the dependence on
 the concentration loss is fourth-root, the constants are coarse, and the
